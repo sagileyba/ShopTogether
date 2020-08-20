@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "748807384271",
+    "firebase_url": "https://shoptogether-2093d.firebaseio.com",
+    "project_id": "shoptogether-2093d",
+    "storage_bucket": "shoptogether-2093d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:748807384271:android:5408849661852551425bba",
+        "android_client_info": {
+          "package_name": "com.project.shoptogether"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "748807384271-o53uj7nqoa7c7ialq403f41edbqk7kut.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.project.shoptogether",
+            "certificate_hash": "480a1cc2c194a7841a7e9728a24956a39ef9ce1d"
+          }
+        },
+        {
+          "client_id": "748807384271-uj68ouhnch3bqnr9vhp69nuun3hg1643.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAF91z_G69E_Hgzps_Kv-I-4nbUu6kOoGA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "748807384271-uj68ouhnch3bqnr9vhp69nuun3hg1643.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
