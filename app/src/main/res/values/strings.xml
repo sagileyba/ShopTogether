@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">ShopTogether</string>
-    <string name="facebook_application_id" translatable="false">783819162423520</string>
-    <string name="facebook_login_protocol_scheme" translatable="false">fb783819162423520</string>
+    <string name="facebook_app_id">783819162423520</string>
+    <string name="fb_login_protocol_scheme">fb783819162423520</string>
+
+
 </resources>
