@@ -1,10 +1,12 @@
-package com.project.shoptogether;
+package com.project.shoptogether.Activities;
 
 import android.content.Intent;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import android.util.Log;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -18,9 +20,8 @@ import com.facebook.AccessTokenTracker;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
-import com.facebook.FacebookSdk;
 import com.facebook.Profile;
-import com.facebook.appevents.AppEventsLogger;
+import com.facebook.ProfileTracker;
 import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
@@ -32,6 +33,7 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FacebookAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.project.shoptogether.R;
 import com.squareup.picasso.Picasso;
 
 
@@ -44,6 +46,11 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseAuth.AuthStateListener authStateListener;
     private AccessTokenTracker accessTokenTracker;
     private static final String TAG= "FacebookAuthentication";
+    private SharedPreferences sharedPref;
+    private SharedPreferences.Editor editor;
+    private ProfileTracker mProfileTracker;
+    private String UserID;
+    private String UserEmail;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,20 +59,45 @@ public class MainActivity extends AppCompatActivity {
         textViewUser = findViewById(R.id.user_text);
         logoView = findViewById(R.id.sign_in_logo);
         FB_Button = findViewById(R.id.login_button);
+        sharedPref = getSharedPreferences("FacebookImage", MODE_PRIVATE);
+        editor = sharedPref.edit();
         mFirebaseAuth = FirebaseAuth.getInstance();
     mCallbackManager= CallbackManager.Factory.create();
+
+
         FB_Button.registerCallback(mCallbackManager, new FacebookCallback<LoginResult>() {
+
             @Override
             public void onSuccess(LoginResult loginResult) {
+/*
+                if(Profile.getCurrentProfile() == null) {
+                    mProfileTracker = new ProfileTracker() {
+                        @Override
+                        protected void onCurrentProfileChanged(Profile oldProfile, Profile currentProfile) {
+                            Log.v("facebook - profile", currentProfile.getFirstName());
+                            mProfileTracker.stopTracking();
+                        }
+                    };
+                    // no need to call startTracking() on mProfileTracker
+                    // because it is called by its constructor, internally.
+                }
+                else {
+                    Profile profile = Profile.getCurrentProfile();
+
+                }*/
+                UserID = loginResult.getAccessToken().getUserId();
+                editor.putString(UserEmail,UserID);
+                editor.apply();
                 Log.i(TAG,"onSuccess"+loginResult);
                 handleFacebookToken(loginResult.getAccessToken());
-
             }
 
             @Override
             public void onCancel() {
                 Log.i(TAG,"onCancel");
                 LoginManager.getInstance().logOut();
+                Log.i("userr",  "onCancel");
+
                 updateUI(null);
 
             }
@@ -81,10 +113,17 @@ public class MainActivity extends AppCompatActivity {
             public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
                 FirebaseUser firebaseUser = firebaseAuth.getCurrentUser();
                 if (firebaseUser != null){
-                  updateUI(firebaseUser);
+                        UserEmail=firebaseUser.getEmail();
+                        Log.i("email",UserEmail);
+                    Log.i("userr",  "onauthStateChanged");
+
+                    updateUI(firebaseUser);
                 }
-                else
+                else {
+                    Log.i("userr",  "onauthStateChangednull");
+
                     updateUI(null);
+                }
             }
         };
         accessTokenTracker = new AccessTokenTracker() {
@@ -98,8 +137,12 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        mCallbackManager.onActivityResult(requestCode,resultCode,data);
         super.onActivityResult(requestCode, resultCode, data);
+        // if you don't add following block,
+        // your registered `FacebookCallback` won't be called
+        if (mCallbackManager.onActivityResult(requestCode, resultCode, data)) {
+            return;
+        }
     }
 
     @Override
@@ -126,11 +169,15 @@ public class MainActivity extends AppCompatActivity {
                 if (task.isSuccessful()) {
                     Log.i(TAG, "sign in with credential: successful ");
                     FirebaseUser firebaseUser = mFirebaseAuth.getCurrentUser();
+                    Log.i("userr",  "onComplete");
+
                     updateUI(firebaseUser);
                 }
                 else{
                     Log.i(TAG, "sign in with credential: failure "+ task.getException());
                     Toast.makeText(MainActivity.this,"Authentication Failed",Toast.LENGTH_SHORT);
+                    Log.i("userr",  "onFail");
+
                     updateUI(null);
 
                 }
@@ -138,23 +185,29 @@ public class MainActivity extends AppCompatActivity {
         });
     }
    private void updateUI(FirebaseUser user){
-    /*   ProfilePictureView profilePictureView;
-       profilePictureView = (ProfilePictureView) findViewById(R.id.friendProfilePicture);
-*/
+     /* ProfilePictureView profilePictureView;
+      profilePictureView = (ProfilePictureView) findViewById(R.id.friendProfilePicture);*/
+
        if(user != null){
-            textViewUser.setText(user.getDisplayName());
-            if(user.getPhotoUrl() != null) {
+
+           textViewUser.setText(user.getDisplayName());
+
                 String photoUrl = user.getPhotoUrl().toString();
-                Picasso.get().load(photoUrl).resize(250,250).into(logoView);
 
+                String profilePicUrl = "https://graph.facebook.com/" + sharedPref.getString(user.getEmail(),null) +"/picture?type=large";
 
-
-//                profilePictureView.setProfileId(Profile.getCurrentProfile().getId());
-            }
+                Picasso.get().load(profilePicUrl).fit().into(logoView);
+ /*             if(Profile.getCurrentProfile() != null) {
+                logoView.setVisibility(View.INVISIBLE);
+                profilePictureView.setVisibility(View.VISIBLE);
+                profilePictureView.setProfileId(Profile.getCurrentProfile().getId());
+            }*/
         }
         else{
-                textViewUser.setText("");
-                logoView.setImageResource(R.drawable.app_logo);
+           textViewUser.setText("");
+        /*   profilePictureView.setVisibility(View.INVISIBLE);
+           logoView .setVisibility(View.VISIBLE);*/
+           logoView.setImageResource(R.drawable.app_logo);
 
             }
 

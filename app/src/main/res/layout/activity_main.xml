@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:layout_gravity="center"
     android:background="#000000"
-    tools:context ="com.project.shoptogether.MainActivity">
+    tools:context ="com.project.shoptogether.Activities.MainActivity">
 
 
     <ImageView
@@ -25,13 +25,14 @@
         app:layout_constraintStart_toStartOf="parent"
         tools:src="@tools:sample/avatars" />
 
-<!--    <com.facebook.login.widget.ProfilePictureView
+ <!--  <com.facebook.login.widget.ProfilePictureView
         android:id="@+id/friendProfilePicture"
         android:layout_width="125dp"
         android:layout_height="127dp"
         android:layout_marginTop="124dp"
         android:adjustViewBounds="true"
         android:foregroundGravity="center_horizontal"
+        android:visibility="invisible"
         android:scaleType="centerInside"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
