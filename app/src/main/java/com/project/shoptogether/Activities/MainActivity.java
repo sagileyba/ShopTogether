@@ -1,217 +1,255 @@
 package com.project.shoptogether.Activities;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.Fragment;
+
 import android.content.Intent;
-
-import android.content.SharedPreferences;
+import android.content.IntentFilter;
+import android.net.Uri;
 import android.os.Bundle;
-
-import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-
-import com.facebook.AccessToken;
-import com.facebook.AccessTokenTracker;
-import com.facebook.CallbackManager;
-import com.facebook.FacebookCallback;
-import com.facebook.FacebookException;
-import com.facebook.Profile;
-import com.facebook.ProfileTracker;
-import com.facebook.login.LoginManager;
-import com.facebook.login.LoginResult;
-import com.facebook.login.widget.LoginButton;
-import com.facebook.login.widget.ProfilePictureView;
+import com.firebase.ui.auth.AuthUI;
+import com.firebase.ui.auth.IdpResponse;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.AuthCredential;
-import com.google.firebase.auth.AuthResult;
-import com.google.firebase.auth.FacebookAuthProvider;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.project.shoptogether.Fragments.CreatedListFragment;
+import com.project.shoptogether.Fragments.FavoritesFragment;
+import com.project.shoptogether.Fragments.HomeFragment;
+import com.project.shoptogether.Fragments.SharedListFragment;
 import com.project.shoptogether.R;
 import com.squareup.picasso.Picasso;
 
 
-public class MainActivity extends AppCompatActivity {
-    private CallbackManager mCallbackManager;
-    private FirebaseAuth mFirebaseAuth;
-    private TextView textViewUser;
-    private ImageView logoView;
-    private LoginButton FB_Button;
-    private FirebaseAuth.AuthStateListener authStateListener;
-    private AccessTokenTracker accessTokenTracker;
-    private static final String TAG= "FacebookAuthentication";
-    private SharedPreferences sharedPref;
-    private SharedPreferences.Editor editor;
-    private ProfileTracker mProfileTracker;
-    private String UserID;
-    private String UserEmail;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+
+public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+
+    private static final int RC_SIGN_IN = 123; // Sign in Id. The number is not relevant
+    private Toolbar toolbar;
+    private DrawerLayout drawer;
+    private BottomNavigationView bottomNav;
+    FirebaseAuth firebaseAuth;
+    FirebaseUser user;
+    NavigationView navigationView;
+    List<AuthUI.IdpConfig> providers;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        textViewUser = findViewById(R.id.user_text);
-        logoView = findViewById(R.id.sign_in_logo);
-        FB_Button = findViewById(R.id.login_button);
-        sharedPref = getSharedPreferences("FacebookImage", MODE_PRIVATE);
-        editor = sharedPref.edit();
-        mFirebaseAuth = FirebaseAuth.getInstance();
-    mCallbackManager= CallbackManager.Factory.create();
+
+        //toolbar settings
+        toolbar = findViewById(R.id.main_activity_toolbar);
+        setSupportActionBar(toolbar);
+        Objects.requireNonNull(getSupportActionBar()).setTitle(getString(R.string.app_name));  //toolbar title
+
+        firebaseAuth=FirebaseAuth.getInstance();
+        user=firebaseAuth.getCurrentUser();
+
+        // Navigation drawer settings
+        drawer = findViewById(R.id.drawer_layout);
+        navigationView= findViewById(R.id.nav_view);
+        navigationView.setNavigationItemSelectedListener(this); // Open the selected fragment from navigation drawer
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, toolbar,
+                R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        drawer.addDrawerListener(toggle);
+        toggle.syncState(); // display navigation drawer icon
 
 
-        FB_Button.registerCallback(mCallbackManager, new FacebookCallback<LoginResult>() {
+        //Bottom navigation settings
+        bottomNav = findViewById(R.id.bottom_navigation);
+        bottomNav.setOnNavigationItemSelectedListener(navListener); // Open the selected fragment from bottom navigation
 
-            @Override
-            public void onSuccess(LoginResult loginResult) {
-/*
-                if(Profile.getCurrentProfile() == null) {
-                    mProfileTracker = new ProfileTracker() {
-                        @Override
-                        protected void onCurrentProfileChanged(Profile oldProfile, Profile currentProfile) {
-                            Log.v("facebook - profile", currentProfile.getFirstName());
-                            mProfileTracker.stopTracking();
-                        }
-                    };
-                    // no need to call startTracking() on mProfileTracker
-                    // because it is called by its constructor, internally.
-                }
-                else {
-                    Profile profile = Profile.getCurrentProfile();
+        // keep the selected fragment when rotating the device
+      /*  if (savedInstanceState == null) {
+            getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
+                    new HomeFragment()).commit();
+        }*/
 
-                }*/
-                UserID = loginResult.getAccessToken().getUserId();
-                editor.putString(UserEmail,UserID);
-                editor.apply();
-                Log.i(TAG,"onSuccess"+loginResult);
-                handleFacebookToken(loginResult.getAccessToken());
-            }
+        // Sign in options- Email, Google and Facebook
+        providers= Arrays.asList(
+                new AuthUI.IdpConfig.EmailBuilder().build(),
+                new AuthUI.IdpConfig.GoogleBuilder().build(),
+                new AuthUI.IdpConfig.FacebookBuilder().build()
 
-            @Override
-            public void onCancel() {
-                Log.i(TAG,"onCancel");
-                LoginManager.getInstance().logOut();
-                Log.i("userr",  "onCancel");
+        );
 
-                updateUI(null);
+        // If the the user is disconnected, display registration screen
+        if(user==null){
+            showSignInOptions();
+        }
 
-            }
 
-            @Override
-            public void onError(FacebookException error) {
-                Log.i(TAG,"onError"+ error);
+    }
 
-            }
-        });
-        authStateListener= new FirebaseAuth.AuthStateListener() {
-            @Override
-            public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
-                FirebaseUser firebaseUser = firebaseAuth.getCurrentUser();
-                if (firebaseUser != null){
-                        UserEmail=firebaseUser.getEmail();
-                        Log.i("email",UserEmail);
-                    Log.i("userr",  "onauthStateChanged");
 
-                    updateUI(firebaseUser);
-                }
-                else {
-                    Log.i("userr",  "onauthStateChangednull");
+    @Override //on open and after refresh the activity
+    protected void onResume() {
+        super.onResume();
+        if(toolbar.hasExpandedActionView())
+            toolbar.collapseActionView();
+        updateProfile();
+    }
 
-                    updateUI(null);
-                }
-            }
-        };
-        accessTokenTracker = new AccessTokenTracker() {
-            @Override
-            protected void onCurrentAccessTokenChanged(AccessToken oldAccessToken, AccessToken currentAccessToken) {
-                if(currentAccessToken == null)
-                    mFirebaseAuth.signOut();
-            }
-        };
+
+
+    public void signOut() {
+
+        AuthUI.getInstance()
+                .signOut(MainActivity.this)
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    public void onComplete(@NonNull Task<Void> task) {
+                        firebaseAuth.signOut();
+                        showSignInOptions();
+                    }
+                });
+    }
+
+    private void showSignInOptions() {
+        startActivityForResult(
+                AuthUI.getInstance()
+                        .createSignInIntentBuilder().setIsSmartLockEnabled(false)
+                        .setAvailableProviders(providers)
+                        .build(),
+                RC_SIGN_IN);
+        bottomNav.setSelectedItemId(R.id.nav_home);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        // if you don't add following block,
-        // your registered `FacebookCallback` won't be called
-        if (mCallbackManager.onActivityResult(requestCode, resultCode, data)) {
-            return;
+
+        if (requestCode == RC_SIGN_IN) {
+            IdpResponse response = IdpResponse.fromResultIntent(data);
+
+            if (resultCode == RESULT_OK) {
+                // Successfully signed in
+                user = FirebaseAuth.getInstance().getCurrentUser();
+
+            } else {
+                Toast.makeText(this, "Sign in error: "+ Objects.requireNonNull(Objects.requireNonNull(response).getError()).getMessage(), Toast.LENGTH_SHORT).show();
+                // Sign in failed. If response is null the user canceled the
+                // sign-in flow using the back button. Otherwise check
+                // response.getError().getErrorCode() and handle the error.
+                // ...
+            }
         }
     }
+
+    private void updateProfile(){
+        View view= navigationView.getHeaderView(0);
+        ImageView profile_image = view.findViewById(R.id.nav_pic);
+        TextView username= view.findViewById(R.id.nav_userName);
+        TextView email= view.findViewById(R.id.nav_email);
+        //If the user is connected display his details in the navigation drawer
+        if(user!=null){
+            username.setText(user.getDisplayName());
+            email.setText(user.getEmail());
+            if(user.getPhotoUrl()!=null) // Display user image by his url
+            {
+                Uri uri;
+                uri=user.getPhotoUrl();
+                Picasso.get().load(uri).into(profile_image);
+            }
+            else
+                profile_image.setImageResource(R.mipmap.ic_launcher_round);
+
+            //open user profile
+            profile_image.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    startActivity(new Intent(getApplicationContext(),MyProfileActivity.class));
+                }
+            });
+        }
+
+    }
+
+
+    private BottomNavigationView.OnNavigationItemSelectedListener navListener =
+            new BottomNavigationView.OnNavigationItemSelectedListener() {
+
+                @Override
+                public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                    Fragment selectedFragment = null;
+                    switch (item.getItemId()) {
+                        case R.id.nav_home:
+                            selectedFragment = new HomeFragment();
+                            break;
+                        case R.id.nav_createdShopping:
+                            selectedFragment = new CreatedListFragment();
+                            break;
+                        case R.id.nav_sharedShopping:
+                            selectedFragment = new SharedListFragment();
+                            break;
+                        case R.id.nav_favorites:
+                            selectedFragment = new FavoritesFragment();
+                            break;
+                    }
+                    getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
+                            Objects.requireNonNull(selectedFragment)).commit();
+                    return true;
+                }
+            };
 
     @Override
-    protected void onStart() {
-        super.onStart();
-        mFirebaseAuth.addAuthStateListener(authStateListener);
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+
+        switch (item.getItemId()) {
+
+            case R.id.nav_share:
+                Intent intent= new Intent(Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                // what you want to send
+                String sharebody= "Wanna share your shopping list with your friend?";
+                // subject
+                String sharesub= "Download App";
+
+                intent.putExtra(Intent.EXTRA_SUBJECT, sharesub);
+                intent.putExtra(Intent.EXTRA_TEXT, sharebody);
+                // pop-up title
+                startActivity(Intent.createChooser(intent, "Share the app"));
+                break;
+            case R.id.nav_about:
+                startActivity(new Intent(this,AboutActivity.class));
+                break;
+            case R.id.nav_logout:
+                signOut();
+                break;
+
+        }
+
+        drawer.closeDrawer(GravityCompat.START);
+        return true;
     }
 
+    //close navigation drawer at first
     @Override
-    protected void onStop() {
-        super.onStop();
-        if(authStateListener!= null){
-            mFirebaseAuth.removeAuthStateListener(authStateListener);
+    public void onBackPressed() {
+        if (drawer.isDrawerOpen(GravityCompat.START)) {
+            drawer.closeDrawer(GravityCompat.START);
+        } else { // go back
+            super.onBackPressed();
         }
     }
-
-    private void handleFacebookToken(AccessToken token){
-        Log.i(TAG, "handleFacebookToken" + token);
-
-        AuthCredential credential= FacebookAuthProvider.getCredential(token.getToken());
-        mFirebaseAuth.signInWithCredential(credential).addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
-            @Override
-            public void onComplete(@NonNull Task<AuthResult> task) {
-                if (task.isSuccessful()) {
-                    Log.i(TAG, "sign in with credential: successful ");
-                    FirebaseUser firebaseUser = mFirebaseAuth.getCurrentUser();
-                    Log.i("userr",  "onComplete");
-
-                    updateUI(firebaseUser);
-                }
-                else{
-                    Log.i(TAG, "sign in with credential: failure "+ task.getException());
-                    Toast.makeText(MainActivity.this,"Authentication Failed",Toast.LENGTH_SHORT);
-                    Log.i("userr",  "onFail");
-
-                    updateUI(null);
-
-                }
-            }
-        });
-    }
-   private void updateUI(FirebaseUser user){
-     /* ProfilePictureView profilePictureView;
-      profilePictureView = (ProfilePictureView) findViewById(R.id.friendProfilePicture);*/
-
-       if(user != null){
-
-           textViewUser.setText(user.getDisplayName());
-
-                String photoUrl = user.getPhotoUrl().toString();
-
-                String profilePicUrl = "https://graph.facebook.com/" + sharedPref.getString(user.getEmail(),null) +"/picture?type=large";
-
-                Picasso.get().load(profilePicUrl).fit().into(logoView);
- /*             if(Profile.getCurrentProfile() != null) {
-                logoView.setVisibility(View.INVISIBLE);
-                profilePictureView.setVisibility(View.VISIBLE);
-                profilePictureView.setProfileId(Profile.getCurrentProfile().getId());
-            }*/
-        }
-        else{
-           textViewUser.setText("");
-        /*   profilePictureView.setVisibility(View.INVISIBLE);
-           logoView .setVisibility(View.VISIBLE);*/
-           logoView.setImageResource(R.drawable.app_logo);
-
-            }
-
-   }
 
 }
 
