@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layoutDirection="ltr">
+
+   <item
+       android:id="@+id/nav_home"
+       android:icon="@drawable/ic_home"
+       android:title="All lists"/>
+
+    <item
+        android:id="@+id/nav_createdShopping"
+        android:icon="@drawable/ic_created_shopping"
+        android:title="Created lists"/>
+
+    <item
+        android:id="@+id/nav_sharedShopping"
+        android:icon="@drawable/ic_people"
+        android:title="Shared"/>
+
+    <item
+        android:id="@+id/nav_favorites"
+        android:icon="@drawable/ic_favorite"
+        android:title="Favorites"/>
+
+
+
+</menu>
